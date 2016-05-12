@@ -6,7 +6,7 @@ body_id: blog
 <div class="post">
   {% if post.featured_image %}
     <a href="{{ post.url | prepend: site.baseurl }}" class="pic">
-      <img src="../images/posts/{{ post.featured_image }}" class="img-responsive" alt="blogpost" />
+      <img src="/images/posts/{{ post.featured_image }}" class="img-responsive" alt="blogpost" />
     </a>
   {% endif %}
 

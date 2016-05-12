@@ -3,6 +3,9 @@ layout: post
 status: publish
 published: true
 title: Twimlets - Disaster Recovery using Twilio
+redirect_from:
+  - /twilio-dr-with-twimlets
+featured_image: fail.jpg
 author:
   display_name: Brian Coyle
   login: bcoyle73
@@ -15,13 +18,12 @@ wordpress_url: http://thinkvoice.net/?p=928
 date: '2014-12-02 13:58:49 -0500'
 date_gmt: '2014-12-02 18:58:49 -0500'
 categories:
-- Twilio Development
+- twilio-services
 tags: []
 comments: []
 ---
-<p>&nbsp;</p>
-<p>[caption id="attachment_929" align="alignleft" width="300"]<a href="http://thinkvoice.net/wp-content/uploads/2014/12/twitter-fail-whale-ascii-art.jpg"><img class="wp-image-929 size-medium" src="http://thinkvoice.net/wp-content/uploads/2014/12/twitter-fail-whale-ascii-art-300x235.jpg" alt="twimlets disaster recovery" width="300" height="235" /></a> photo credit: <a href="https://www.flickr.com/photos/isaacmao/5186833282/">IsaacMao</a> via <a href="http://photopin.com">photopin</a> <a href="http://creativecommons.org/licenses/by/2.0/">cc</a>[/caption]</p>
 <p>#fail happens.  We just recently had our DNS provider, dnsimple, get hit with a massive denial of service attack bringing us down along with a slew of other sites.  We run our apps on a fantastic PaaS, Heroku, that allows us to have affordable redundancy but when this attack hit dnsimple it took down the whole front door to that redundancy.  Even with their own redundancy dnsimple wasn't able to withstand the attack so requests to our servers could not be handled. Our phone and SMS services are built on top of Twilio and during this outage Twilio was up and running.   As people dialed our numbers or sent us texts Twilio would try to forward those on to us but couldn't get through due to the DNS outage. For SMS messages we could could easily see those messages in the Twilio interface and handle those appropriately but phone calls are a real time synchronous process...someone is on the other end of the phone waiting for us to pick up!  Luckily we had a redundant solution in place that did not rely on our DNS provider.  We used Twimlets to redirect to calls.   <br />
+
 <h2>Here is what you need to do to use Twimlets</h2>
 <ol>
 <li>Decide how you want to route calls in an emergency.  Do you want to call <a href="https://www.twilio.com/labs/twimlets/forward" target="_blank">one phone</a>, many phones<a href="https://www.twilio.com/labs/twimlets/simulring" target="_blank"> at once</a>,  many phones <a href="https://www.twilio.com/labs/twimlets/findme" target="_blank">in order</a>, take a <a href="https://www.twilio.com/labs/twimlets/voicemail" target="_blank">voicemail</a>, or do you just want to play a <a href="https://www.twilio.com/labs/twimlets/message" target="_blank">down message</a>?</li>

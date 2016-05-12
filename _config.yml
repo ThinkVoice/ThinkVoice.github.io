@@ -18,6 +18,7 @@ facebook_app_id: 203507920034510
 facebook_page_id: 984809268262771
 paginate: 5
 paginate_path: "/blog/page:num/"
+permalink: /blog/:categories/:year/:month/:day/:title
 # Build settings
 markdown: kramdown
 gems:

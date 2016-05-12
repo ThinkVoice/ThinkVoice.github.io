@@ -75,8 +75,9 @@ post '/sms' do
 end
 {% endhighlight %}
 <h2> Handling the SMS Assignment Callback</h2>
-<p>As we know from <a title="Salesforce Call Center with Twilio – Part 1" href="http://thinkvoice.net/salesforce-call-center-part-1/">part one</a> when TaskRouter has found the best agent to handle a task it POSTs an assignment to a URL which in our app is /assignment.  We handle an SMS message in the same assignment handler by adding a task type attribute to all tasks and give instructions to task router based on the type of task.  For phone calls we were able to tell task router to <strong>dequeue</strong> the call to our worker's browser since we used Twiml to queue the call.  For SMS messages we are going to tell TaskRouter to have our worker automatically <strong>accept </strong>the incoming SMS then we log both the task and worker id in the DB to track the conversation.  We log the conversation at this point because we know now what worker is assigned the SMS message.</p>
-<pre class="lang:ruby decode:true " title="SMS Assignment - client-acd.rb">post '/assignment' do
+<p>As we know from <a title="Salesforce Call Center with Twilio – Part 1" href="/salesforce-call-center-part-1/">part one</a> when TaskRouter has found the best agent to handle a task it POSTs an assignment to a URL which in our app is /assignment.  We handle an SMS message in the same assignment handler by adding a task type attribute to all tasks and give instructions to task router based on the type of task.  For phone calls we were able to tell task router to <strong>dequeue</strong> the call to our worker's browser since we used Twiml to queue the call.  For SMS messages we are going to tell TaskRouter to have our worker automatically <strong>accept </strong>the incoming SMS then we log both the task and worker id in the DB to track the conversation.  We log the conversation at this point because we know now what worker is assigned the SMS message.</p>
+{% highlight ruby %}
+post '/assignment' do
   attributes = JSON.parse params[:TaskAttributes]
   task = params[:TaskSid]
   worker = params[:WorkerSid]
@@ -100,9 +101,11 @@ end
   content_type :json
   assignment_instruction.to_json
 
-end</pre>
+end
+{% endhighlight %}
 <p>Note that we have changed our /voice POST handler to make this work by sending the task type attribute on phone calls.  We can use TaskAttributes to pass any data associated with tasks.</p>
-<pre class="lang:ruby decode:true " title="Task type in /voice - client-acd.rb">post '/voice' do
+{% highlight ruby %}
+post '/voice' do
   response = Twilio::TwiML::Response.new do |r|
     r.Say("Please wait for the next availible agent ")
     r.Enqueue workflowSid: workflow_id do |e|
@@ -110,14 +113,15 @@ end</pre>
     end
   end
   response.text
-end</pre>
+end
+{% endhighlight %}
 <h2>Handling SMS Client Side</h2>
 <p>Now that we have our incoming SMS routed appropriately through TaskRouter on the server we need to handle the SMS message once it's pushed out to our worker in Salesforce.  First we create an interface for our SMS agents.</p>
-<p>&nbsp;</p>
-<p>For those messages that we receive via TaskRouter we use the callbacks given to us in <a title="Twilio worker.js overview" href="https://www.twilio.com/docs/taskrouter/worker-js-overview">worker.js</a> as we had setup up in <a title="Salesforce Call Center with Twilio – Part 1" href="http://thinkvoice.net/salesforce-call-center-part-1/">part one</a> to handle incoming phone calls.</p>
-<p><a href="http://thinkvoice.net/wp-content/uploads/2015/04/Screen-Shot-2015-04-13-at-10.29.02-AM.png"><img class=" size-medium wp-image-1100 alignright" src="http://thinkvoice.net/wp-content/uploads/2015/04/Screen-Shot-2015-04-13-at-10.29.02-AM-214x300.png" alt="Salesforce SMS" width="214" height="300" /></a>When a new SMS message is assigned to our Salesforce worker then our softphone pops up with this interface along with the screen pop in the main Salesforce screen.  Our agent can now have a two way SMS conversation with the customer or lead with the full context of their Salesforce account.  We keep the agent in an unavailable state while they complete their conversation.  When they click the Wrap Up button we will remove the conversation and make our agent available again to receive new work.</p>
-<p>In <a title="Salesforce Call Center with Twilio – Part 1" href="http://thinkvoice.net/salesforce-call-center-part-1/">part one</a> we used worker.js to simply handle agent state changes as the existing Twilio Client code handled the incoming phone call.  With SMS we have to add another callback from worker.js to alert us when our worker has been reserved.  We check the reservation is a SMS message then we do the UI handling for an incoming SMS message.  Again, for phone calls this handling is done with the Twilio Client handlers.</p>
-<pre class="lang:js decode:true " title="TaskRouter hanlders - softphone.js">SP.functions.registerTaskRouterCallbacks = function(){
+<p>For those messages that we receive via TaskRouter we use the callbacks given to us in <a title="Twilio worker.js overview" href="https://www.twilio.com/docs/taskrouter/worker-js-overview">worker.js</a> as we had setup up in <a title="Salesforce Call Center with Twilio – Part 1" href="/salesforce-call-center-part-1/">part one</a> to handle incoming phone calls.</p>
+<p><img style="float: right;" src="/images/posts/sms-message.png" alt="Salesforce SMS" width="214" height="300" /></a>When a new SMS message is assigned to our Salesforce worker then our softphone pops up with this interface along with the screen pop in the main Salesforce screen.  Our agent can now have a two way SMS conversation with the customer or lead with the full context of their Salesforce account.  We keep the agent in an unavailable state while they complete their conversation.  When they click the Wrap Up button we will remove the conversation and make our agent available again to receive new work.</p>
+<p>In <a title="Salesforce Call Center with Twilio – Part 1" href="/salesforce-call-center-part-1/">part one</a> we used worker.js to simply handle agent state changes as the existing Twilio Client code handled the incoming phone call.  With SMS we have to add another callback from worker.js to alert us when our worker has been reserved.  We check the reservation is a SMS message then we do the UI handling for an incoming SMS message.  Again, for phone calls this handling is done with the Twilio Client handlers.</p>
+{% highlight javascript %}
+SP.functions.registerTaskRouterCallbacks = function(){
       console.dir("Register callbacks");
       SP.worker.on('ready', function(worker) {
         SP.functions.startWebSocket(worker.sid);
@@ -132,11 +136,13 @@ end</pre>
           SP.functions.incomingSMS(task.attributes);
         }
       });
-    }</pre>
+    }
+{% endhighlight %}
 <p>THAT'S IT!  Other than the UI handling with just those few lines of code we have a seamlessly blended universal communication omnichannel cloud [insert other buzzy words] queue.  Pretty cool.</p>
 <h2>Sending SMS from Salesforce</h2>
 <p>Wait...we still have to handle when the agent clicks Send.  In our sinarta app we create a /send_sms hanlder that will use the Twilio REST API to send the message the agent has typed to the customer.  In real life you need to secure this so any knucklehead doesn't send a POST to send an SMS.</p>
-<pre class="lang:ruby decode:true " title="Send SMS - client-acd.rb">post '/send_sms' do
+{% highlight ruby %}
+post '/send_sms' do
   @client = Twilio::REST::Client.new(account_sid, auth_token)
   account = @client.account
   begin
@@ -150,6 +156,6 @@ end</pre>
     logger.info e
   end
   return message.status
-end</pre>
+end
+{% endhighlight %}
 <p>If you have any questions on the code or the implementation please feel to reach out to us.  Again, if you are not a developer and just want the solution please reach out to us as well and we can help.</p>
-<p>&nbsp;</p>

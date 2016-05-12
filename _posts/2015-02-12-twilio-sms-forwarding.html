@@ -3,6 +3,8 @@ layout: post
 status: publish
 published: true
 title: Twilio SMS Forwarding
+redirect_from:
+  - /twilio-sms-forwarding
 author:
   display_name: Brian Coyle
   login: bcoyle73
@@ -10,16 +12,18 @@ author:
   url: ''
 author_login: bcoyle73
 author_email: bcoyle73@gmail.com
+featured_image: person-text.png
 wordpress_id: 953
 wordpress_url: http://thinkvoice.net/?p=953
 date: '2015-02-12 09:05:04 -0500'
 date_gmt: '2015-02-12 14:05:04 -0500'
 categories:
-- Twilio Development
+- twilio-services
 tags: []
 comments: []
 ---
-<p><a href="http://thinkvoice.net/wp-content/uploads/2015/02/people-40936_640.png"><img class="alignright wp-image-981 size-medium" src="http://thinkvoice.net/wp-content/uploads/2015/02/people-40936_640-285x300.png" alt="twilio sms forwarding" width="285" height="300" /></a>We recently had a request to setup Twilio SMS forwarding for someone using <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a>.  Not long ago we shared how we use <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> for <a title="Disaster Recovery using Twilio and Twimlets" href="http://thinkvoice.net/twilio-dr-with-twimlets/">forwarding calls</a> in a disaster recovery situation and it turns out some folks do a lot with just <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a>.  Chained together you can create some really powerful call flows with <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> but we recently had a request to do something as simple as <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> but with Twilio SMS .  The key was to provide the same simplicity of using URL parameters to control the functionality while doing as little programming as possible. <a title="Twimlbin Twiml Hosting" href="http://twimlbin.com/" target="_blank">Twimlbin</a> is a great solution for hosting static Twiml without the need for a server but we needed a mechanism to dynamically forward text messages per Twilio phone number so that solution wouldn't work for us.</p>
+<p>We recently had a request to setup Twilio SMS forwarding for someone using <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a>.  Not long ago we shared how we use <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> for <a title="Disaster Recovery using Twilio and Twimlets" href="http://thinkvoice.net/twilio-dr-with-twimlets/">forwarding calls</a> in a disaster recovery situation and it turns out some folks do a lot with just <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a>.  Chained together you can create some really powerful call flows with <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> but we recently had a request to do something as simple as <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> but with Twilio SMS .  The key was to provide the same simplicity of using URL parameters to control the functionality while doing as little programming as possible. <a title="Twimlbin Twiml Hosting" href="http://twimlbin.com/" target="_blank">Twimlbin</a> is a great solution for hosting static Twiml without the need for a server but we needed a mechanism to dynamically forward text messages per Twilio phone number so that solution wouldn't work for us.</p>
+
 <p>We ended up writing  the simplest ruby script possible utilizing the <a title="Sinatra Ruby" href="http://www.sinatrarb.com/" target="_blank">Sinatra</a> framework and hosting on <a title="Heroku" href="https://www.heroku.com" target="_blank">Heroku</a> that would allow us to forward Twilio SMS messages to a dynamic number passed as a URL parameter.</p>
 <h2>Here is how we do Twilio SMS Forwarding</h2>
 <p>Setup our main Sinatra application:<br />
