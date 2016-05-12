@@ -9,6 +9,7 @@ permalink: /contact/
 	<div class="container">
 		<div class="row">
 			<div class="col-md-8 message">
+				{% if site.bot %}
 				<h3>Talk to our Bot</h3>
 				<p>
 					Our customer service bot is friendly and pretty smart.  She can help you with most questions or can connect you to a real human.  Give it a shot via Facebook Messenger!
@@ -20,8 +21,10 @@ permalink: /contact/
 					  color="blue"
 					  size="xlarge">
 					</div>
+				<h3> Or </h3>
+				{% endif %}
 
-				<h3>Or you can send us an email</h3>
+				<h3>Send us an email</h3>
 				<p>
 					You can ask us anything or setup a demo. <br/> We'll get in touch with you as soon as possible.
 				</p>
