@@ -1,0 +1,45 @@
+---
+layout: page
+---
+<div id="blogpost-wrapper">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12">
+					{% if page.featured_image %}
+					<div class="main-pic">
+						<img src="/images/posts/{{ page.featured_image }}" class="img-responsive" alt="blogpost" />
+					</div>
+					{% endif %}
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-10 post">
+					<div class="title">
+						{{ page.title }}
+					</div>
+					<div class="author">
+						{% include author.html author=page.author date=page.date %}
+					</div>
+					<div class="content">
+						{{ content }}
+					</div>
+					<div class="share">
+						<a href="https://twitter.com/share" class="twitter-share-button" data-via="ThinkVoiceHQ">Tweet</a>
+<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+					</div>
+					<div class="other-posts">
+						{% if page.previous %}
+							<a href="{{ page.previous.url }}" class="prev">
+								← {{ page.previous.title}}
+							</a>
+						{% endif %}
+						{% if page.next %}
+							<a href="{{ page.next.url }}" class="next pull-right">
+								{{ page.next.title }} →
+							</a>
+						{% endif %}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>

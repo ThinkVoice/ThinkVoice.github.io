@@ -1,0 +1,155 @@
+---
+layout: post
+status: publish
+published: true
+title: Salesforce Call Center with Twilio – Part 2 - SMS
+redirect_from:
+  - /salesforce-call-center-part-2/
+author:
+  display_name: Brian Coyle
+  login: bcoyle73
+  email: bcoyle73@gmail.com
+  url: ''
+author_login: bcoyle73
+author_email: bcoyle73@gmail.com
+wordpress_id: 1096
+wordpress_url: http://thinkvoice.net/?p=1096
+date: '2015-04-13 10:03:48 -0400'
+date_gmt: '2015-04-13 15:03:48 -0400'
+categories:
+- twilio-services
+tags: []
+comments: []
+---
+<p>Welcome to part two of our guide on implementing an omnichannel call center directly into your Salesforce CRM using Salesforce Open CTI, Twilio TaskRouter and Twilio client.  Part two adds the ability to handle incoming SMS messages to our agents in the same queue as the phone calls we implemented in <a title="Salesforce Call Center with Twilio – Part 1" href="http://thinkvoice.net/salesforce-call-center-part-1/">part one</a>.  If you missed part part one you can find it <a title="Salesforce Call Center with Twilio – Part 1" href="http://thinkvoice.net/salesforce-call-center-part-1/">here</a>.</p>
+<p><iframe width="420" height="315" src="https://www.youtube.com/embed/vZAAlUdHjig" frameborder="0" allowfullscreen></iframe></p>
+<p>The source code for the solution is available <a title="Twilio Client ACD" href="https://github.com/bcoyle73/client-acd">here</a>. The tutorial is aimed at developers looking to build a call center within Salesforce or just looking to learn more about TaskRouter.  You can deploy the end solution to Heroku straight away.  If you aren't a developer but want the end solution give us a <a title="Contact" href="http://thinkvoice.net/contact/">shout </a>and we can give you a demo.</p>
+
+<p><a href="https://heroku.com/deploy?template=https://github.com/bcoyle73/client-acd"><img src="https://www.herokucdn.com/deploy/button.png" alt="Deploy" /></a></p>
+<h2>Part Two - Salesforce SMS</h2>
+<p>When we left part one we were delivering phone calls to agents in a queue directly into their browser with very little third party configuration thanks to Salesforce Open CTI, Twilio TaskRouter, and Twilio client.  Now in part two we are going to enable our agents to handle SMS along with phone calls and deliver those SMS messages in the same queue as our phone calls with only a few lines of code.</p>
+<h2>Routing Incoming SMS to Salesforce</h2>
+<p>The first thing we will do is configure Twilio and our application to handle an incoming SMS message.  If you have been following along up to this point you should have a Twilio phone number with a voice url pointed to your running application.  To configure SMS we are going to use the same url but change /voice to /sms and configure that URL on the Twilio Incoming phone number.</p>
+<p>Inside of our sinatra app we will create a POST handler to receive each incoming SMS message.  We need to handle both brand new incoming SMS messages from customers and incoming messages that are part of a conversation already in progress with an agent.</p>
+<p>For messages that have not already been routed to an agent we will create a task for TaskRouter and assign that task to our workflow.  We will also put a cookie on those incoming messages so we can track that task and check if each message is part of an existing conversation.  For more info on using cookies checkout this <a title="Twilio SMS Cookies" href="https://www.twilio.com/blog/2014/07/the-definitive-guide-to-sms-conversation-tracking.html">guide</a>.</p>
+<p>For messages that are part of existing conversation with an agent we have no need to use TaskRouter as we know who that message should go to.  We take the task id from the cookie and check our DB if we have an active conversation.  If we do, we get the worker id and push that message out to the worker's Salesforce browser using the websocket we created in part one.  If there is no conversation in the DB then we go ahead and send the message back through TaskRouter.</p>
+{% highlight ruby %}
+post '/sms' do
+  active_conversation = nil
+  # check for a conversation cookie
+  if session[:task]
+    # The cookie is present.  Look up to see if the conversation is still active
+    task = session[:task]
+    active_conversation = mongoconvos.find_one({ _id: task}) || false
+  end
+  # if the conversation is in the DB don't use TaskRouter.  Just push the message to the worker
+  if active_conversation
+    settings.sockets.each{|s|
+      querystring = s.request["query"]
+      worker = querystring.split(/\=/)[1]
+      if (worker == active_conversation["worker"])
+        msg = {:message =&gt; {:Body =&gt; params[:Body], :From =&gt; params[:From]}}.to_json
+        s.send(msg)
+      end
+    }
+  else
+    # We will create a new task.  First form our Task from the incoming SMS
+    task_attributes = {'task_type' =&gt; 'sms'}
+
+    #merge the incoming sms into our attributes
+    task_attributes = task_attributes.merge(params)
+
+    # Start a client to TaskRouter so we can create a new task
+    begin
+      @trclient = Twilio::REST::TaskRouterClient.new(account_sid, auth_token, workspace_id)
+
+      response = @trclient.tasks.create(attributes: task_attributes.to_json, WorkflowSid: workflow_id)
+
+      # attach the task id to a cookie to track conversations
+      session[:task] = response.sid
+    rescue Twilio::REST::RequestError =&gt; e
+      logger.info "Error creating task"
+      logger.info e
+    end
+  end
+end
+{% endhighlight %}
+<h2> Handling the SMS Assignment Callback</h2>
+<p>As we know from <a title="Salesforce Call Center with Twilio – Part 1" href="http://thinkvoice.net/salesforce-call-center-part-1/">part one</a> when TaskRouter has found the best agent to handle a task it POSTs an assignment to a URL which in our app is /assignment.  We handle an SMS message in the same assignment handler by adding a task type attribute to all tasks and give instructions to task router based on the type of task.  For phone calls we were able to tell task router to <strong>dequeue</strong> the call to our worker's browser since we used Twiml to queue the call.  For SMS messages we are going to tell TaskRouter to have our worker automatically <strong>accept </strong>the incoming SMS then we log both the task and worker id in the DB to track the conversation.  We log the conversation at this point because we know now what worker is assigned the SMS message.</p>
+<pre class="lang:ruby decode:true " title="SMS Assignment - client-acd.rb">post '/assignment' do
+  attributes = JSON.parse params[:TaskAttributes]
+  task = params[:TaskSid]
+  worker = params[:WorkerSid]
+  assignment_instruction = {}
+  task_type = attributes["task_type"]
+  case task_type
+  when 'sms'
+    assignment_instruction = {
+      instruction: 'accept',
+      from: attributes["From"]
+    }
+    # create a conversation in the db to track
+    conversation = {_id: task, worker: worker}
+    id = mongoconvos.update({_id: task},  conversation, {upsert: true})
+  when 'call'
+    assignment_instruction = {
+      instruction: 'dequeue',
+      from: attributes["from"]
+    }
+  end
+  content_type :json
+  assignment_instruction.to_json
+
+end</pre>
+<p>Note that we have changed our /voice POST handler to make this work by sending the task type attribute on phone calls.  We can use TaskAttributes to pass any data associated with tasks.</p>
+<pre class="lang:ruby decode:true " title="Task type in /voice - client-acd.rb">post '/voice' do
+  response = Twilio::TwiML::Response.new do |r|
+    r.Say("Please wait for the next availible agent ")
+    r.Enqueue workflowSid: workflow_id do |e|
+      e.TaskAttributes '{"task_type":"call"}'
+    end
+  end
+  response.text
+end</pre>
+<h2>Handling SMS Client Side</h2>
+<p>Now that we have our incoming SMS routed appropriately through TaskRouter on the server we need to handle the SMS message once it's pushed out to our worker in Salesforce.  First we create an interface for our SMS agents.</p>
+<p>&nbsp;</p>
+<p>For those messages that we receive via TaskRouter we use the callbacks given to us in <a title="Twilio worker.js overview" href="https://www.twilio.com/docs/taskrouter/worker-js-overview">worker.js</a> as we had setup up in <a title="Salesforce Call Center with Twilio – Part 1" href="http://thinkvoice.net/salesforce-call-center-part-1/">part one</a> to handle incoming phone calls.</p>
+<p><a href="http://thinkvoice.net/wp-content/uploads/2015/04/Screen-Shot-2015-04-13-at-10.29.02-AM.png"><img class=" size-medium wp-image-1100 alignright" src="http://thinkvoice.net/wp-content/uploads/2015/04/Screen-Shot-2015-04-13-at-10.29.02-AM-214x300.png" alt="Salesforce SMS" width="214" height="300" /></a>When a new SMS message is assigned to our Salesforce worker then our softphone pops up with this interface along with the screen pop in the main Salesforce screen.  Our agent can now have a two way SMS conversation with the customer or lead with the full context of their Salesforce account.  We keep the agent in an unavailable state while they complete their conversation.  When they click the Wrap Up button we will remove the conversation and make our agent available again to receive new work.</p>
+<p>In <a title="Salesforce Call Center with Twilio – Part 1" href="http://thinkvoice.net/salesforce-call-center-part-1/">part one</a> we used worker.js to simply handle agent state changes as the existing Twilio Client code handled the incoming phone call.  With SMS we have to add another callback from worker.js to alert us when our worker has been reserved.  We check the reservation is a SMS message then we do the UI handling for an incoming SMS message.  Again, for phone calls this handling is done with the Twilio Client handlers.</p>
+<pre class="lang:js decode:true " title="TaskRouter hanlders - softphone.js">SP.functions.registerTaskRouterCallbacks = function(){
+      console.dir("Register callbacks");
+      SP.worker.on('ready', function(worker) {
+        SP.functions.startWebSocket(worker.sid);
+      });
+      SP.worker.on('activity.update', function(worker) {
+        SP.functions.updateStatus("", worker);
+        console.log("Worker activity changed to: " + worker.activity_name);
+      });
+      SP.worker.on('reservation.created', function(task){
+        if (task.attributes["task_type"] == 'sms'){
+          SP.currentTask = task.tasksid;
+          SP.functions.incomingSMS(task.attributes);
+        }
+      });
+    }</pre>
+<p>THAT'S IT!  Other than the UI handling with just those few lines of code we have a seamlessly blended universal communication omnichannel cloud [insert other buzzy words] queue.  Pretty cool.</p>
+<h2>Sending SMS from Salesforce</h2>
+<p>Wait...we still have to handle when the agent clicks Send.  In our sinarta app we create a /send_sms hanlder that will use the Twilio REST API to send the message the agent has typed to the customer.  In real life you need to secure this so any knucklehead doesn't send a POST to send an SMS.</p>
+<pre class="lang:ruby decode:true " title="Send SMS - client-acd.rb">post '/send_sms' do
+  @client = Twilio::REST::Client.new(account_sid, auth_token)
+  account = @client.account
+  begin
+    message = account.messages.create(
+      from: caller_id,
+      to: params[:To],
+      body: params[:Message]
+    )
+  rescue Twilio::REST::RequestError =&gt; e
+    logger.info "Error sending SMS"
+    logger.info e
+  end
+  return message.status
+end</pre>
+<p>If you have any questions on the code or the implementation please feel to reach out to us.  Again, if you are not a developer and just want the solution please reach out to us as well and we can help.</p>
+<p>&nbsp;</p>

@@ -1,0 +1,144 @@
+---
+layout: post
+status: publish
+published: true
+title: Salesforce Call Center with Twilio - Part 1 - Phone Calls
+redirect_from:
+  - /salesforce-call-center-part-1/
+author:
+  display_name: Brian Coyle
+  login: bcoyle73
+  email: bcoyle73@gmail.com
+  url: ''
+author_login: bcoyle73
+author_email: bcoyle73@gmail.com
+wordpress_id: 1055
+wordpress_url: http://thinkvoice.net/?p=1055
+date: '2015-03-27 14:04:49 -0400'
+date_gmt: '2015-03-27 19:04:49 -0400'
+categories:
+- Twilio Development
+tags: []
+comments: []
+---
+<p>This is a beginner's guide to implementing an omnichannel call center directly into your Salesforce CRM using Salesforce Open CTI, Twilio TaskRouter and Twilio client.  The source code for the solution is available <a title="Twilio Client ACD" href="https://github.com/bcoyle73/client-acd">here</a>. The tutorial is aimed at developers looking to build a call center within Salesforce or just looking to learn more about TaskRouter.  If you just want to check out the end product you can deploy it to Heroku straight away.  If you aren't a developer but want to learn more give us a <a title="Contact" href="http://thinkvoice.net/contact/">shout </a>and we can give you a demo.</p>
+<p><a href="https://heroku.com/deploy?template=https://github.com/bcoyle73/client-acd"><br />
+<img src="https://www.herokucdn.com/deploy/button.png" alt="Deploy" /></a></p>
+<h2>Traditional Salesforce Call Center CTI Solutions</h2>
+<p>If you want to bring phone calls into your Salesforce CRM you are, in the best case scenario, integrating a stand alone cloud based call center product with prebuilt connectors, or at worst integrating an on premise legacy PBX through multiple layers of integration.  In either case you are managing your call center across multiple systems leaving you with a management headache that is extremely costly and error prone.  The following tutorial aims to solve this headache by reducing dependence on third party solutions and leaving as much configuration in Salesforce as possible.</p>
+<h2>Omnichannel</h2>
+<p>The demo demonstrates the ability to handle multiple channels of communication using Twilio TaskRouter to manage a single queue of communications coming from different channels.  This has been a real struggle as point solutions are only able to handle one or two communication channels and few support SMS as a channel.</p>
+<h2>Brief Overview the Technologies Used</h2>
+<p>The tutorial is built on the fantastic demo of a Salesforce embeddable <a title="Twilio Client ACD " href="https://github.com/choppen5/client-acd">ACD</a> using Twilio Client by <a href="https://github.com/choppen5">Charles Oppenheimer</a> of Twilio.  Many thanks to Charles for sharing that demo.  We have simply taken that demo and inserted TaskRouter to handle the distribution of calls and addition of text messages.</p>
+<h5>Salesforce Open CTI</h5>
+<p>Salesforce Open CTI is an open API to allow third party CTI vendors to connect telephony channels into the Salesforce CRM interface.  In our demo we use Open CTI to house our soft phone and drive the click to dial/text functionality.  The demo requires no plugins or installed software thanks to the design of Open CTI. For more info see the <a title="Salesforce Open CTI" href="https://developer.salesforce.com/page/Open_CTI">developer guide</a>.</p>
+<h5>Twilio Client</h5>
+<p><a title="Twilio Client" href="https://www.twilio.com/webrtc">Twilio Client</a> is a WebRTC interface to Twilio.  In our demo we are using the javascript library which gives us an API and connection to Twilio to receive the call within our Salesforce browser delivering the call via WebRTC.  Twilio client also gives us the ability to control the call via our soft phone.</p>
+<h5>Twilio TaskRouter</h5>
+<p><a title="Twilio TaskRouter" href="https://www.twilio.com/taskrouter">TaskRouter</a> is the queue and state machine that we have our Salesforce users connect to through the Open CTI soft phone.  We route all of our calls and texts through TaskRouter which manages the queueing of those  communications.  TaskRouter also monitors the state of our Salesforce users sending them the calls and texts as they become available.  What differentiates TaskRouter from traditional cloud or on premise phone systems is it's completely API driven so we can place all administrative functions within Salesforce.</p>
+<h2>Getting Started - Part 1 - Phone Calls</h2>
+<p>First I highly recommend going through the original <a title="Client-Acd" href="https://github.com/choppen5/client-acd">client-acd</a> project from Charles as he covers all the basic setup including Twilio setup.  Our <a title="README" href="https://github.com/bcoyle73/tce/blob/master/README.md">README</a> covers the additional setup steps of configuring the necessary TaskRouter components.  At a high level we have replaced any code that was managing agent state or call queueing with TaskRouter code including removing all the Mongo DB code.  Mind the twilio-gem version.  The TaskRouter stuff is in after 3.15.  The rest of the post is going to cover the implementation of TaskRouter.</p>
+<h2>Call Routing with TaskRouter</h2>
+<p>Lets start with routing incoming calls to TaskRouter.  In our Sinatra app we are going to change the /voice action to send the call into our workflow via Twiml.  This will immediately route our incoming call into the queue that is now managed by TaskRouter and the workflow we defined.  With that we now have a call in queue waiting for agent.  Very simple!</p>
+<pre class="lang:ruby decode:true ">post '/voice' do
+  response = Twilio::TwiML::Response.new do |r|
+    r.Say("Please wait for the next availible agent ")
+    r.Enqueue workflowSid: workflow_id
+  end
+  response.text
+end</pre>
+<p>Lets now hook up the agent state.</p>
+<h2>Salesforce Agent State Handling</h2>
+<p>Thanks to the work done in the original project it was really easy to plug the agent into TaskRouter.  As the softphone loads up within the Salesforce browser the softphone.js code was already pulling the agent id from the Salesforce API and registering as a Twilio Client.  Once we have a Twilio Client established we then go to register the agent with TasksRouter.  Much like registering a Twilio Client we need to get a token from the server with the proper permissions. In our code we pass the Salesforce user id in an ajax call so we can use that to match to the correct worker defined with TaskRouter.</p>
+<pre class="lang:js decode:true" title="softphone.js">// Register the TaskRouter worker
+$.get("/workertoken", {"client":SP.username}, function (workerToken) {
+    SP.worker = new Twilio.TaskRouter.Worker(workerToken);
+    SP.functions.registerTaskRouterCallbacks();
+    var activitySids = {};
+
+    // For this demo we assume basic states to map to the existing Ready/Not Ready so we will
+    // take 1 ready and 1 not ready event
+    // In real app we would make an interface with dynamic state drop down and map them here
+    SP.worker.fetchActivityList(function(error, activityList) {
+      var activities = activityList.activities;
+      var i = activities.length;
+      while (i--) {
+        if (activities[i].available){
+          SP.actvities.ready = activities[i].sid
+        } else {
+          SP.actvities.notReady = activities[i].sid
+        }
+      }
+    });
+});</pre>
+<p>On the server we use the Twilio REST API to create a client to TaskRouter.  With the REST API we can loop through all the workers that are defined for our Workspace, find the worker that corresponds to our salesforce agent and generate a token for that worker.  We return that token back to the client side where our javascript function instantiates a worker via the worker.js library.</p>
+<pre class="lang:default decode:true" title="client-acd.rb - Server">## Receives the client id loops through the defined workers for this workspace
+## If a workers is defined with the client name it returns a token for the TaskRouter worker
+get '/workertoken' do
+  client_name = params[:client]
+  if client_name
+    @trclient = Twilio::REST::TaskRouterClient.new(account_sid, auth_token, workspace_id)
+    workertoken = nil
+    @trclient.workers.list.each do |worker|
+      logger.info worker.friendly_name
+      if worker.friendly_name == client_name
+        worker_capability = Twilio::TaskRouter::Capability.new account_sid, auth_token, workspace_id, worker.sid
+        worker_capability.allow_worker_fetch_attributes
+        worker_capability.allow_worker_activity_updates
+        workertoken = worker_capability.generate_token
+      end
+    end
+  end
+  return workertoken || ""
+end</pre>
+<p>Worker.js is the javascript SDK that gives us the ability to receive work from the queue and gives us the ability to manage agent state.  In this example we register for the activity.update callback which will let our client know anytime this agent changes state and when it does we update the UI.  Worker.js also allows us to retrieve a list of activities or states that an agent can be set to.  Each activity (or state) is either Available or Unavailable meaning they can take work or not.  In this demo we assume one activity is available and will store the sid of one Available activity and one Unavailable activity.  We use these sids to set the agent state later.</p>
+<pre class="lang:default decode:true" title="softphone.js">// callback for TaskRouter to tell use when agent state has changed
+SP.functions.registerTaskRouterCallbacks = function(){
+  console.dir("Register callbacks");
+  SP.worker.on('activity.update', function(worker) {
+    SP.functions.updateStatus("", worker);
+    console.log("Worker activity changed to: " + worker.activity_name);
+  });
+}</pre>
+<p>So we now have a call in queue, and a salesforce agent able to register to the queue and manage their state.  Lets see how work gets distributed to our agent.</p>
+<h2>Routing Calls to the Salesforce Agent</h2>
+<p>Back when we setup our inbound call handling in client-acd.rb /voice we simply redirected the call to the TaskRouter Workflow with Twiml.  Because we did this there is a little magic baked into TaskRouter we can take advantage of.   First lets understand how TaskRouter routes work.  The call came into Twilio and was directed to a workflow.  The workflow is aware of workers (agents) who have attributes that the workflow can use to determine who should take that work.  In this demo the workflow is acting as a simple queue knowing who has been idle for the longest.  When we log into salesforce and click the Ready button Worker.js tells TaskRouter that our worker/agent is available.  TaskRouter assigns the activity (the call in this case) to the agent.  The workflow is configured to POST that assignment to our Sinatra app at /assignment.  When the app receives that POST we simply tell TaskRouter to dequeue the call to the agent's Twilio Client ID which is configured on the worker's attribute {"contact_uri": "client:salesforce_login_id"}...magic!</p>
+<pre class="lang:default decode:true" title="Assignment Handling - client-acd.rb">#######  This is called when agents is selected by TaskRouter to send the task ###############
+## We will use the dequeue method of handling the assignment
+### https://www.twilio.com/docs/taskrouter/handling-assignment-callbacks#dequeue-call
+post '/assignment' do
+  raw_attributes = params[:TaskAttributes]
+  attributes = JSON.parse raw_attributes
+  logger.info attributes
+  from = attributes["from"]
+  logger.info from
+  assignment_instruction = {
+    instruction: 'dequeue',
+    from: from
+  }
+  content_type :json
+  assignment_instruction.to_json
+
+end</pre>
+<p>You can handle the assignment in a few other <a title="TaskRouter Assignment Handling" href="https://www.twilio.com/docs/taskrouter/handling-assignment-callbacks#dequeue-call">ways</a> but because we used Twiml this just works automatically.</p>
+<h2>Wrapping Up</h2>
+<p>TaskRouter has really simplified our code as we don't need to manage agent state.  We still keep a websocket connection and polling to push real time stats up to our soft phone giving our agent the number of logged in agents and number of items in the queue.  We use the TaskRouter REST API to get that info.</p>
+<pre class="lang:default decode:true " title="client-acd.rb">## Thread that polls to get current queue size, and updates websocket clients with new info
+## We now use the TaskRouter rest client to query workers and agents
+Thread.new do
+   while true do
+     sleep(1)
+     stats = @trclient.task_queue_statistics(task_queue_id).realtime
+     qsize = stats["tasks_by_status"]["pending"]
+     readycount = stats["total_available_workers"]
+
+      settings.sockets.each{|s|
+        msg =  { :queuesize =&gt; qsize, :readyagents =&gt; readycount}.to_json
+        logger.debug("Sending webocket #{msg}");
+        s.send(msg)
+      }
+     logger.debug("run = #{$sum} #{Time.now} qsize = #{qsize} readyagents = #{readycount}")
+  end
+end</pre>
+<p>In the next part of this demo we will add text message routing to our Salesforce Call Center. Stay tuned.</p>
+<p>&nbsp;</p>

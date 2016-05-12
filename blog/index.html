@@ -1,0 +1,24 @@
+---
+layout: blog
+body_id: blog
+---
+{% for post in paginator.posts %}
+<div class="post">
+  {% if post.featured_image %}
+    <a href="{{ post.url | prepend: site.baseurl }}" class="pic">
+      <img src="../images/posts/{{ post.featured_image }}" class="img-responsive" alt="blogpost" />
+    </a>
+  {% endif %}
+
+  <div class="title">
+    <a href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
+  </div>
+  <div class="author">
+    {% include author.html author=post.author date=post.date %}
+  </div>
+  <p class="intro">
+    {{ post.excerpt }}
+  </p>
+  <a href="{{ post.url | prepend: site.baseurl }}" class="continue-reading">Continue reading this post</a>
+</div>
+{% endfor %}

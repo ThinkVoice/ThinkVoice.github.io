@@ -1,0 +1,25 @@
+{% if page.url == "/" %}
+  <header class="navbar navbar-inverse hero" role="banner">
+{% else %}
+  <header class="navbar navbar-inverse normal" role="banner">
+{% endif %}
+      <div class="container">
+        <div class="navbar-header">
+            <button class="navbar-toggle" type="button" data-toggle="collapse" data-target=".bs-navbar-collapse">
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">
+              <img src="/images/ThinkVoice_logo_lightondark.png" alt="ThinkVoice logo" title>
+            </a>
+        </div>
+        <nav class="collapse navbar-collapse bs-navbar-collapse" role="navigation">
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="/about">About us</a></li>
+              <li><a href="/contact">Contact us</a></li>
+              <li><a href="/blog">Blog</a></li>
+            </ul>
+        </nav>
+      </div>
+  </header>

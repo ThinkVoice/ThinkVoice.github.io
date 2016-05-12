@@ -1,0 +1,32 @@
+---
+layout: post
+status: publish
+published: true
+title: Twilio SMS Forwarding
+author:
+  display_name: Brian Coyle
+  login: bcoyle73
+  email: bcoyle73@gmail.com
+  url: ''
+author_login: bcoyle73
+author_email: bcoyle73@gmail.com
+wordpress_id: 953
+wordpress_url: http://thinkvoice.net/?p=953
+date: '2015-02-12 09:05:04 -0500'
+date_gmt: '2015-02-12 14:05:04 -0500'
+categories:
+- Twilio Development
+tags: []
+comments: []
+---
+<p><a href="http://thinkvoice.net/wp-content/uploads/2015/02/people-40936_640.png"><img class="alignright wp-image-981 size-medium" src="http://thinkvoice.net/wp-content/uploads/2015/02/people-40936_640-285x300.png" alt="twilio sms forwarding" width="285" height="300" /></a>We recently had a request to setup Twilio SMS forwarding for someone using <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a>.  Not long ago we shared how we use <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> for <a title="Disaster Recovery using Twilio and Twimlets" href="http://thinkvoice.net/twilio-dr-with-twimlets/">forwarding calls</a> in a disaster recovery situation and it turns out some folks do a lot with just <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a>.  Chained together you can create some really powerful call flows with <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> but we recently had a request to do something as simple as <a title="Twimlets" href="https://www.twilio.com/labs/twimlets" target="_blank">Twimlets</a> but with Twilio SMS .  The key was to provide the same simplicity of using URL parameters to control the functionality while doing as little programming as possible. <a title="Twimlbin Twiml Hosting" href="http://twimlbin.com/" target="_blank">Twimlbin</a> is a great solution for hosting static Twiml without the need for a server but we needed a mechanism to dynamically forward text messages per Twilio phone number so that solution wouldn't work for us.</p>
+<p>We ended up writing  the simplest ruby script possible utilizing the <a title="Sinatra Ruby" href="http://www.sinatrarb.com/" target="_blank">Sinatra</a> framework and hosting on <a title="Heroku" href="https://www.heroku.com" target="_blank">Heroku</a> that would allow us to forward Twilio SMS messages to a dynamic number passed as a URL parameter.</p>
+<h2>Here is how we do Twilio SMS Forwarding</h2>
+<p>Setup our main Sinatra application:<br />
+<script src="https://gist.github.com/bcoyle73/5663a78bd957ca078ff9.js"></script>Here we simply write a method to handle a post to /message/forward/.  From Twilio we can pass the number we want to forward the SMS message to by passing that in the URL of the post.  When Twilio POSTs an incoming SMS message it will tell us the Body of the message and who sent the message.  We need to include the number who sent us the original message as when we forward the SMS the from number will be our Twilio number and we would need know who sent the original.  So we simply concatenate that into the body of the message.  Finally our method prints out the Twiml telling Twilio to send the SMS on.</p>
+<h2>Securing our Twilio forwarded SMS messages</h2>
+<p>We have our messages forwarding which is great but what is prevent anyone just posting to our method and spamming on our behalf? Nothing...so lets fix that.<script src="https://gist.github.com/bcoyle73/b5d865dc8fc67d9c2f69.js"></script><br />
+Using one simple line of code we can now make sure that only POSTs from Twilio will do the forwarding and further by adding our secret token we can make sure some knucklehead doesn't try to forward SMS messages from some other Twilio account.</p>
+<p>Many thanks to the wonderful <a title="Securing Twilio messages" href="https://www.twilio.com/blog/2014/09/securing-your-ruby-webhooks-with-rack-middleware.html" target="_blank">blog post</a> by Phil Nash on using Rack middleware.</p>
+<p>See the full source of the app and deployment instructions to Heroku <a title="Twilio SMS Forwarding" href="https://github.com/bcoyle73/twilio-sms-forward/">here</a>.</p>
+<p>&nbsp;</p>

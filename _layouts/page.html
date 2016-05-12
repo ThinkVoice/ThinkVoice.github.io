@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+{% include head.html %}
+{% include base.html %}
+<body id={% if page.body_id %} {{ page.body_id }} {% else %} "blogpost" {% endif %}>
+	{% include header.html %}
+	{{ content }}
+	{% include page-footer.html %}
+</body>
+</html>

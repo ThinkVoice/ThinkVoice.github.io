@@ -1,0 +1,52 @@
+---
+layout: page
+---
+<div id="posts">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-9">
+
+					{{ content }}
+
+					<div class="pages">
+						<ul class="pagination">
+							{% if paginator.previous_page %}
+						  	<li><a href="{{ paginator.previous_page_path }}">&laquo; Previous Page</a></li>
+							{% else %}
+								<li><a href="#">&laquo; Previous Page</a></li>
+							{% endif %}
+						  {% if paginator.next_page %}
+						  	<li><a href="{{ paginator.next_page_path }}">Next Page &raquo;</a></li>
+							{% else %}
+								<li><a href="#">Next Page &raquo;</a></li>
+							{% endif %}
+						</ul>
+					</div>
+				</div>
+				<div class="col-md-3 sidebar">
+					<div class="updates">
+						<strong>
+							Free blog updates
+							<i class="fa fa-rss"></i>
+						</strong>
+						{% include email.html %}
+					</div>
+
+					<div class="follow-tw">
+						<a class="twitter-follow-button"
+  						href="https://twitter.com/ThinkVoiceHQ">
+							Follow @ThinkVoiceHQ
+						</a>
+					</div>
+					<div class="best-hits">
+						<strong>Check out our best hits:</strong>
+						<a href="#">How to start a business</a>
+						<a href="#">How to sell online</a>
+						<a href="#">Climate change when needed</a>
+						<a href="#">Web development upstart</a>
+						<a href="#">Learn Rails in 30 days</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>

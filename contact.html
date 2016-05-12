@@ -1,0 +1,69 @@
+---
+layout: page
+title: Contact
+body_id: contact-us
+permalink: /contact/
+---
+
+<div id="info">
+	<div class="container">
+		<div class="row">
+			<div class="col-md-8 message">
+				<h3>Talk to our Bot</h3>
+				<p>
+					Our customer service bot is friendly and pretty smart.  She can help you with most questions or can connect you to a real human.  Give it a shot via Facebook Messenger!
+				</p>
+
+					<div class="fb-messengermessageus"
+					  messenger_app_id="203507920034510"
+					  page_id="984809268262771"
+					  color="blue"
+					  size="xlarge">
+					</div>
+
+				<h3>Or you can send us an email</h3>
+				<p>
+					You can ask us anything or setup a demo. <br/> We'll get in touch with you as soon as possible.
+				</p>
+				<form role="form" id="contact-form" action="https://www.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8" method="POST">
+					<input type=hidden name="oid" value="00DU0000000HlFB">
+					<input type=hidden name="retURL" value="https://thinkvoice.net/thank-you">
+					<div class="form-group">
+			    		<label for="first_name">Your name</label>
+			    		<input type="text" name="first_name" class="form-control" id="first_name" />
+			  		</div>
+			  		<div class="form-group">
+			    		<label for="email">Email address</label>
+			    		<input type="email" name="email" class="form-control" id="email" />
+			  		</div>
+			  		<div class="form-group">
+			    		<label for="phone">Phone</label>
+			    		<input type="text" name="phone" class="form-control" id="phone" />
+			  		</div>
+			  		<div class="form-group">
+			    		<label for="description">Your message</label>
+			    		<textarea name="description" class="form-control" id="description" rows="6"></textarea>
+			  		</div>
+			  		<div class="submit">
+			  			<input type="submit" class="button button-small" value="Email us" />
+			  		</div>
+				</form>
+			</div>
+			<div class="col-md-4 contact">
+				<div class="phone">
+					<h3>By Phone</h3>
+					<p>
+						1-866-636-0284
+					</p>
+				</div>
+				<div class="online-support">
+					<strong>Looking for online support?</strong>
+				</div>
+				<div class="social">
+					<a href="https://www.facebook.com/{{ site.facebook_page_name }}" class="fb"><img src="../images/social/fb.png" alt="facebook" /></a>
+					<a href="https://twitter.com/{{ site.twitter_username }}" class="tw"><img src="../images/social/tw.png" alt="twitter" /></a>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
