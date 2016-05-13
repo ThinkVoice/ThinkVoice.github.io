@@ -1,8 +1,8 @@
 // 
 //  This file includes the scripts used in the gallery.html for the isotope filtering and the 
 //  Zoom-in Zoom-out functionality of the images.
-//  It uses the fluidbox code by http://terrymun.com/ 
-//  Docs can be located at http://codepen.io/terrymun/full/JKHwp
+//  It uses the fluidbox code by //terrymun.com/ 
+//  Docs can be located at //codepen.io/terrymun/full/JKHwp
 // 
 
 $(function (){
