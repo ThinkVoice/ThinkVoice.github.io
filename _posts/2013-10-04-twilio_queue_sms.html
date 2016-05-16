@@ -1,0 +1,46 @@
+---
+layout: post
+status: publish
+published: true
+title: Twilio Queue - From Push to Pull
+redirect_from:
+  - /twilio_queue_sms/
+author:
+  display_name: Brian Coyle
+  login: bcoyle73
+  email: bcoyle73@gmail.com
+  url: ''
+author_login: bcoyle73
+author_email: bcoyle73@gmail.com
+wordpress_id: 653
+wordpress_url: http://thinkvoice.net/?p=653
+date: '2013-10-04 13:51:40 -0400'
+date_gmt: '2013-10-04 18:51:40 -0400'
+categories:
+- twilio-development
+tags: []
+comments:
+- id: 4
+  author: ThinkVoice Revamps Customer Service With Twilio Queue
+  author_email: ''
+  author_url: http://twilioinc.wpengine.com/2014/01/thinkvoice-makes-a-smarter-phone-queue-for-customers-and-staff-with-twilio.html
+  date: '2014-01-06 14:15:07 -0500'
+  date_gmt: '2014-01-06 19:15:07 -0500'
+  content: "[&#8230;] the Phone From a Push System to a Pull System&#8221; originally
+    published on the ThinkVoice blog here. He walks you through building your own
+    Twilio powered call queue system in the code featured [&#8230;]"
+---
+<p><a href="http://thinkvoice.net/wp-content/uploads/2013/10/2201440179_1f0c24b792_q.jpg"><img class="alignleft size-full wp-image-670" src="http://thinkvoice.net/wp-content/uploads/2013/10/2201440179_1f0c24b792_q.jpg" alt="twilio queue push pull" width="150" height="150" /></a>Taking calls from customers and leads is challenging when you don't have a dedicated staff to do so but you can do it with a pretty straight forward solution using Twilio Queue. The problem is we are frequently in meetings or tied up to take calls as they come in and having a lead or customer leave a message is a poor user experience. For ThinkVoice we didn't want to just put up an email address because we really want to and love to talk to customers and leads. It is the fastest and most effective way to understand our customers and potential customers. So we solved the inherent problem with the phone using Twilio Queue.</p>
+<p>The phone is by nature a push system. When someone dials your phone number that call is pushed to your phone and you have somewhere around four rings to answer or it goes to voicemail. To fix this we created a Twilio app that will change the phone from being a push system to a pull system where calls can be queued and pulled to mobile phones by the person best suited to take the call.</p>
+<p>Queues are nothing new for phones but the idea of calls being pulled out of queue rather than being pushed is new. In call centers ACDs are large complex systems that queue calls and push those calls to agents. In order to do this the ACD must monitor each agent in real time via synchronous messaging to deliver a call as soon as that agent is available. If we change that push model to be a pull model then we can have the agent's system asynchronously pull calls out of queue or they themselves queue up for the next call. Breaking that synchronous communication requirement drastically reduces the complexity of call center technology making it less expensive and more agile.</p>
+<p><a href="http://thinkvoice.net/wp-content/uploads/2013/10/PushPull_small.jpg"><img class="alignnone size-large wp-image-832" src="http://thinkvoice.net/wp-content/uploads/2013/10/PushPull_small-660x1024.jpg" alt="Twilio Queue small" width="660" height="1024" /></a></p>
+<h3>Here is how we did it using Twilio Queue.</h3>
+<p>The first thing we are going to do is answer the call and immediately send a SMS message. Using the meta data from Twilio we can include a look up of the caller's name and their location. We then place them in a queue and redirect the app to tell Twilio what to play them while in queue. For our case we will tell the caller we are routing them and play them some music.</p>
+<p>[gist id="6829791" file="gistfile1.rb"]</p>
+<p>When we receive the SMS message we can reply to tell Twilio what to do with the call. We can configure the SMS to take any number of keywords to control different routing behaviors but we are just using a Yes or No to take the call or send it to voicemail. In either case when the SMS is received we are going to pull the call out of queue and redirect the call to the proper instructions.</p>
+<p>[gist id="6829791" file="gistfile2.rb"]</p>
+<p>If we have decided not to take the call we are simply going to send Twilio instructions to tell the caller to leave a message that will be recorded and stored by Twilio. If we have decided to take the call then we tell Twilio to call our mobile number and bridge the caller.</p>
+<p>[gist id="6829791" file="gistfile3.rb"]</p>
+<p>The full code for the Pull Phone system is on <a href="https://github.com/bcoyle73/Pull-Phone">GitHub</a>. If you need any help setting up your own Pull Phone system please let us know and we would be glad to help.</p>
+<p>&nbsp;</p>
+<p><em>push pull image from <a href="http://www.flickr.com/photos/booleansplit/">Robert S Donovan</a></em></p>
